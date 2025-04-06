@@ -98,7 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateGrid() {
         gridContainer.innerHTML = ''; // Clear previous grid
-        const safeContentWidth = Math.max(1, CONTENT_WIDTH);
+
+        // No longer need safeContentWidth calculation here, CSS handles layout
+
         const linesPerColumn = Math.max(Math.ceil(BASE_TOTAL_LINES / 2), Math.ceil((potentialPasswords.length + dudRemoversAvailable + attemptResetsAvailable + 5) / 2));
         const totalLines = linesPerColumn * 2;
 
@@ -108,96 +110,86 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < attemptResetsAvailable; i++) bracketsToPlace.push({ type: 'reset' });
         shuffleArray(bracketsToPlace);
 
-        let lineData = [];
+        let lineData = []; // Still useful for structure, though content length varies
         let currentAddress = START_ADDRESS;
         let placementIndices = shuffleArray([...Array(totalLines).keys()]);
-        let itemPlacements = {}; // index -> { type: 'word'/'bracket', value: word/bracketInfo }
+        let itemPlacements = {};
 
-        // Place words first
         wordsToPlace.forEach(word => {
             if (placementIndices.length > 0) {
                 itemPlacements[placementIndices.pop()] = { type: 'word', value: word };
             }
         });
-        // Place brackets in remaining spots
         bracketsToPlace.forEach(bracketInfo => {
             if (placementIndices.length > 0) {
                 itemPlacements[placementIndices.pop()] = { type: 'bracket', value: bracketInfo };
             }
         });
 
-        activeBrackets = []; // Reset bracket tracking for this grid generation
+        activeBrackets = [];
         let bracketIdCounter = 0;
 
-        // Build line data and DOM structure
         for (let lineIndex = 0; lineIndex < totalLines; lineIndex++) {
             const address = formatAddress(currentAddress);
             const placement = itemPlacements[lineIndex];
-            let lineContentSpans = []; // Array of span elements for this line
+            let lineContentSpans = []; // Array of span elements
 
-            if (placement?.type === 'word' && placement.value.length <= safeContentWidth) {
+            // Simplified content generation - relies more on CSS now
+            const maxJunkPrefix = 15; // Limit prefix junk somewhat
+            const maxJunkSuffix = 20; // Limit suffix junk somewhat
+            const maxInnerJunk = 8;  // Limit inner bracket junk
+
+            if (placement?.type === 'word') {
                 const word = placement.value;
-                const prefixLen = getRandomInt(0, safeContentWidth - word.length);
-                const suffixLen = safeContentWidth - prefixLen - word.length;
-
+                const prefixLen = getRandomInt(0, maxJunkPrefix);
+                // No suffix calculation needed - let it flow
                 if (prefixLen > 0) lineContentSpans.push(createJunkSpan(generateJunk(prefixLen)));
                 lineContentSpans.push(createWordSpan(word));
-                if (suffixLen > 0) lineContentSpans.push(createJunkSpan(generateJunk(suffixLen)));
+                // Add some trailing junk
+                 lineContentSpans.push(createJunkSpan(generateJunk(getRandomInt(1, maxJunkSuffix))));
+
 
             } else if (placement?.type === 'bracket') {
                 const bracketType = BRACKET_TYPES[getRandomInt(0, BRACKET_TYPES.length - 1)];
-                const innerJunkLen = getRandomInt(1, 5); // Junk inside brackets
-                const bracketPairLen = 2 + innerJunkLen;
+                const innerJunkLen = getRandomInt(1, maxInnerJunk);
+                const bracketId = `bracket-${bracketIdCounter++}`;
+                const bracketEffect = placement.value.type;
 
-                if (bracketPairLen <= safeContentWidth) {
-                    const prefixLen = getRandomInt(0, safeContentWidth - bracketPairLen);
-                    const suffixLen = safeContentWidth - prefixLen - bracketPairLen;
-                    const bracketId = `bracket-${bracketIdCounter++}`;
-                    const bracketEffect = placement.value.type; // 'dud' or 'reset'
+                const prefixLen = getRandomInt(0, maxJunkPrefix);
+                 if (prefixLen > 0) lineContentSpans.push(createJunkSpan(generateJunk(prefixLen)));
 
-                    if (prefixLen > 0) lineContentSpans.push(createJunkSpan(generateJunk(prefixLen)));
+                const bracketSpan = document.createElement('span');
+                bracketSpan.classList.add('bracket-pair');
+                bracketSpan.dataset.bracketId = bracketId;
+                bracketSpan.dataset.effect = bracketEffect;
+                bracketSpan.textContent = bracketType[0] + generateJunk(innerJunkLen) + bracketType[1];
+                lineContentSpans.push(bracketSpan);
 
-                    // Create a single span wrapping the whole bracket pair
-                    const bracketSpan = document.createElement('span');
-                    bracketSpan.classList.add('bracket-pair');
-                    bracketSpan.dataset.bracketId = bracketId;
-                    bracketSpan.dataset.effect = bracketEffect;
-                    bracketSpan.textContent = bracketType[0] + generateJunk(innerJunkLen) + bracketType[1];
-                    lineContentSpans.push(bracketSpan);
+                activeBrackets.push({
+                    id: bracketId,
+                    type: bracketEffect,
+                    element: bracketSpan
+                });
 
-                    // Store bracket info for later lookup
-                    activeBrackets.push({
-                        id: bracketId,
-                        type: bracketEffect,
-                        element: bracketSpan // Direct reference to the element
-                    });
+                 // Add some trailing junk
+                 lineContentSpans.push(createJunkSpan(generateJunk(getRandomInt(1, maxJunkSuffix))));
 
-                    if (suffixLen > 0) lineContentSpans.push(createJunkSpan(generateJunk(suffixLen)));
-
-                } else {
-                    // Bracket doesn't fit, fill with junk
-                    lineContentSpans.push(createJunkSpan(generateJunk(safeContentWidth)));
-                }
             } else {
-                // No item or word didn't fit, fill line with junk
-                lineContentSpans.push(createJunkSpan(generateJunk(safeContentWidth)));
+                // Fill line with just junk (variable length)
+                lineContentSpans.push(createJunkSpan(generateJunk(getRandomInt(10, 30)))); // Adjust junk length range
             }
 
-             // Create the line container and add elements
+            // --- Rest of the grid line creation remains the same ---
             const lineDiv = document.createElement('div');
             lineDiv.classList.add('grid-line');
-            // lineDiv.dataset.lineIndex = lineIndex; // Not strictly needed anymore
-
             const addressSpan = document.createElement('span');
             addressSpan.classList.add('address');
             addressSpan.textContent = address;
             lineDiv.appendChild(addressSpan);
-
             const contentSpan = document.createElement('span');
             contentSpan.classList.add('content');
             lineContentSpans.forEach(span => contentSpan.appendChild(span));
             lineDiv.appendChild(contentSpan);
-
             gridContainer.appendChild(lineDiv);
             currentAddress += ADDRESS_INCREMENT;
         }

@@ -289,3 +289,104 @@ html, body {
     background-color: #005010;
     padding: 0 0.25em;
 }
+
+@media (max-width: 768px) { /* Adjust breakpoint as needed (e.g., 600px for smaller phones) */
+
+    html, body {
+        font-size: 14px; /* Slightly smaller base font for mobile */
+        overflow: auto; /* Allow scrolling on body if needed */
+    }
+
+    #terminal {
+        width: 95vw; /* Use viewport width */
+        height: auto; /* Let height be determined by content */
+        min-height: 85vh; /* Ensure it takes up most of the vertical space */
+        max-height: none; /* Remove fixed max-height */
+        margin: 1vh auto; /* Reduce vertical margin */
+        padding: 0.5em 1ch; /* Keep minimal padding */
+        overflow-y: auto; /* Ensure scrolling works */
+        /* Optional: Slightly reduce glow intensity on mobile */
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.6),
+                    inset 0 0 15px rgba(50, 255, 100, 0.3);
+        text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+    }
+
+    /* Switch grid to single column */
+    #grid-container {
+        grid-template-columns: 1fr; /* Single column */
+        column-gap: 0;
+        font-size: 0.9em; /* Make grid text slightly smaller */
+        width: 100%; /* Ensure it uses full container width */
+    }
+
+    .grid-line {
+        height: auto; /* Allow lines to wrap if necessary */
+        white-space: normal; /* Allow content wrapping within lines */
+        margin-bottom: 0.2em; /* Add small space between wrapped lines */
+    }
+
+     .address {
+        width: auto; /* Let address width be natural */
+        margin-right: 0.5ch;
+        display: inline; /* Make it flow better with wrapped content */
+    }
+
+    .content {
+        display: inline; /* Allow content to wrap with address */
+        word-break: break-all; /* Force break long junk sequences */
+    }
+
+    /* Adjust interactive element padding/margin for touch */
+    .password, .bracket-pair {
+        padding: 1px 2px; /* Slightly more touch padding */
+        margin: 0;
+    }
+
+    /* Ensure feedback area wraps */
+     #feedback-area {
+        min-height: 3em;
+        white-space: pre-wrap;
+     }
+
+    /* Prompt area */
+    #prompt-area {
+        margin-top: 1em;
+    }
+
+    /* Overlay adjustments */
+    #overlay {
+        padding: 0.5em; /* Reduce overlay padding */
+    }
+    #difficulty-selector, #lockout-message, #success-message {
+        padding: 1em; /* Reduce modal padding */
+        width: 90%; /* Ensure modal fits */
+        max-width: 400px; /* Limit max width */
+    }
+    #difficulty-selector h2, #lockout-message h2, #success-message h2 {
+        font-size: 1.2em; /* Slightly smaller headings */
+    }
+     #difficulty-selector button, #play-again-button {
+         padding: 0.8em 1em;
+         font-size: 0.9em;
+         min-width: 150px;
+     }
+
+    /* Optional: Tone down CRT effects on mobile if desired */
+    #terminal::before {
+        /* Less intense vignette */
+        background:
+            radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.5) 100%),
+            repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2) 0px, rgba(0, 0, 0, 0.2) 1px, transparent 1px, transparent 4px);
+    }
+    #terminal::after {
+         animation-duration: 0.12s; /* Slightly slower flicker */
+    }
+    @keyframes crtFlicker { /* Less intense flicker opacity */
+        0%   { opacity: 0.15; }
+        20%  { opacity: 0.08; }
+        40%  { opacity: 0.20; }
+        60%  { opacity: 0.10; }
+        80%  { opacity: 0.18; }
+        100% { opacity: 0.12; }
+    }
+}
