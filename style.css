@@ -1,0 +1,291 @@
+/* Basic Reset & Font */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    background-color: #000;
+    color: #00FF41; /* Classic Fallout green */
+    /* Prioritize reliable monospace fonts */
+    font-family: 'Consolas', 'Monaco', 'Courier New', 'Lucida Console', monospace;
+    font-size: 16px; /* Base size - adjust if needed */
+    overflow: hidden; /* Prevent body scrolling */
+}
+
+/* Terminal Container - 80 Columns Wide */
+#terminal {
+    width: 80ch; /* Set width to 80 characters */
+    height: 42em; /* Example fixed height in line units */
+    max-height: 90vh; /* Still prevent excessive height */
+    margin: 2vh auto; /* Center horizontally */
+    padding: 0.5em 1ch; /* Minimal padding inside the 80ch */
+    border: 2px solid #00FF41;
+    background-color: rgba(0, 20, 0, 0.8);
+    overflow-y: auto; /* Allow scrolling ONLY if content exceeds fixed height */
+    position: relative; /* Needed for overlay and CRT */
+    /* Enhanced main green glow (CRT Effect) */
+    box-shadow: 0 0 25px rgba(0, 255, 65, 0.8),
+                inset 0 0 20px rgba(50, 255, 100, 0.4);
+    /* Hide pseudo-elements if they overflow (CRT Effect) */
+    overflow: hidden;
+    /* Add text glow inherited by children (CRT Effect) */
+    text-shadow: 0 0 7px rgba(0, 255, 65, 0.7);
+}
+
+/* Header */
+#header p {
+    text-align: center;
+    margin-bottom: 0.25em;
+    white-space: pre; /* Prevent wrapping */
+    overflow: hidden; /* Hide overflow if somehow too long */
+}
+
+/* Attempts */
+#attempts-area {
+    margin: 0.5em 0;
+    font-weight: bold;
+    white-space: pre;
+}
+
+#attempt-blocks span {
+    display: inline-block;
+    width: 1ch; /* Use character width */
+    height: 1em;
+    background-color: #00FF41;
+    margin-right: 1px; /* Minimal space */
+    vertical-align: middle;
+}
+#attempt-blocks span.empty {
+    background-color: #005010;
+}
+
+
+/* Grid - Calculated for 80 columns */
+#grid-container {
+    display: grid;
+    grid-template-columns: 39ch 39ch; /* (80ch total - 2ch padding) / 2 */
+    column-gap: 0; /* No gap needed, handled by content */
+    row-gap: 0; /* No vertical gap needed */
+    margin-bottom: 1em;
+    font-size: 1em; /* Keep grid font same size */
+    white-space: pre; /* CRITICAL: Preserve spaces/layout */
+    overflow: hidden; /* Prevent internal overflow */
+}
+
+.grid-line {
+     height: 1.2em; /* Ensure consistent line height */
+     overflow: hidden; /* Clip any accidental overflow */
+}
+
+.address {
+    display: inline-block;
+    width: 6ch; /* "0xFFFF " */
+    margin-right: 1ch; /* Space after address */
+    text-align: left;
+}
+
+.content {
+    display: inline-block;
+    vertical-align: top; /* Align content nicely */
+}
+
+/* Interactive Elements & Hover */
+.password, .bracket-pair, .junk {
+    /* Base style for potential hover targets */
+    cursor: default; /* Default cursor, override below */
+}
+
+.password, .bracket-pair {
+    cursor: pointer; /* Make words and brackets clickable */
+}
+
+.password {
+    font-weight: bold;
+    background-color: rgba(0, 255, 65, 0.05); /* Subtle bg for click target */
+    padding: 0 1px;
+    margin: 0 -1px;
+}
+
+.bracket-pair {
+     /* Optional: slightly different look for brackets? */
+    /* color: #33ff77; */
+}
+
+/* General Hover Highlight */
+.hover-highlight {
+    background-color: #005010; /* Highlight color */
+    outline: 1px dotted #00FF41; /* Optional outline */
+}
+
+
+/* Styles for deactivated items */
+.guessed, .removed-dud, .bracket-deactivated {
+    cursor: default;
+    text-decoration: none;
+    color: #008f25; /* Dimmer green */
+    background-color: transparent !important; /* Remove hover/click bg */
+    font-weight: normal;
+    outline: none !important; /* Remove hover outline */
+}
+
+
+/* Feedback */
+#feedback-area {
+    border-top: 1px dashed #00FF41;
+    border-bottom: 1px dashed #00FF41;
+    padding: 0.5em 0;
+    margin-bottom: 0.5em;
+    min-height: 4em; /* Reserve space */
+    white-space: pre-wrap; /* Allow wrapping */
+}
+
+/* Prompt & Cursor */
+#prompt-area {
+    margin-top: 0.5em;
+    height: 1.2em; /* Reserve space */
+    white-space: pre;
+}
+
+#cursor {
+    animation: blink 1s step-end infinite;
+    background-color: #00FF41;
+    display: inline-block;
+    width: 1ch;
+    height: 1em;
+    vertical-align: bottom;
+}
+
+/* --- CRT Effect --- */
+
+/* Scanlines & Vignette Overlay - More Pronounced */
+#terminal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        /* Vignette - Stronger */
+        radial-gradient(ellipse at center,
+            rgba(0,0,0,0) 0%,
+            rgba(0,0,0,0) 35%,
+            rgba(0,0,0,0.75) 100%
+        ),
+        /* Scanlines - Darker & Thicker Option */
+        repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.35) 0px,
+            rgba(0, 0, 0, 0.35) 2px,
+            transparent 2px,
+            transparent 5px
+        );
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Flicker/Noise Overlay - More Visible */
+#terminal::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(18, 16, 16, 0.1);
+    opacity: 0;
+    z-index: 3;
+    pointer-events: none;
+    animation: crtFlicker 0.08s infinite linear alternate;
+}
+
+
+/* Ensure content is above the overlays */
+#header,
+#attempts-area,
+#grid-container,
+#feedback-area,
+/* #controls-area removed */
+#prompt-area {
+    position: relative;
+    z-index: 5;
+}
+
+
+/* Flicker Animation - Higher Opacity */
+@keyframes crtFlicker {
+    0%   { opacity: 0.25; }
+    20%  { opacity: 0.15; }
+    40%  { opacity: 0.30; }
+    60%  { opacity: 0.18; }
+    80%  { opacity: 0.28; }
+    100% { opacity: 0.22; }
+}
+
+/* Blinking Cursor Animation */
+@keyframes blink {
+    50% { background-color: transparent; }
+}
+
+/* --- End CRT Effect --- */
+
+
+/* Overlay for Difficulty/Messages */
+#overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+    padding: 1em;
+}
+#overlay.active {
+    display: flex;
+}
+
+#difficulty-selector, #lockout-message, #success-message {
+    background-color: #080808;
+    border: 1px solid #00FF41;
+    padding: 2em;
+    box-shadow: 0 0 15px #00FF41;
+    max-width: 90%;
+}
+
+#difficulty-selector button, #play-again-button {
+    display: block;
+    margin: 0.75em auto;
+    padding: 0.5em 1em;
+    font-size: 1em;
+    cursor: pointer;
+    background-color: #005010;
+    border: 1px solid #00FF41;
+    color: #00FF41;
+    min-width: 200px;
+}
+#difficulty-selector button:hover, #play-again-button:hover {
+    background-color: #00FF41;
+    color: #000;
+}
+
+#lockout-message p, #success-message p {
+    margin: 0.75em 0;
+}
+
+#correct-password-reveal {
+    font-weight: bold;
+    background-color: #005010;
+    padding: 0 0.25em;
+}

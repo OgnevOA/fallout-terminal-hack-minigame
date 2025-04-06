@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fallout Terminal Hack</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="terminal">
+        <div id="header">
+            <p>ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</p>
+            <!-- Minor change: Hint about brackets -->
+            <p>ENTER PASSWORD NOW (BRACKETS MAY HIDE OPTIONS)</p>
+        </div>
+
+        <div id="attempts-area">
+            <span id="attempts-left-text"></span> ATTEMPT(S) LEFT: <span id="attempt-blocks"></span>
+        </div>
+
+        <div id="grid-container">
+            <!-- Grid will be populated by JavaScript -->
+        </div>
+
+        <div id="feedback-area">
+            <!-- Feedback messages will appear here -->
+        </div>
+
+        <!-- CONTROLS AREA REMOVED -->
+
+        <div id="prompt-area">
+             > <span id="cursor">█</span>
+        </div>
+
+         <div id="overlay" class="active">
+             <div id="difficulty-selector">
+                 <h2>Select Difficulty:</h2>
+                 <button data-difficulty="1">Novice (4-5 Letters)</button>
+                 <button data-difficulty="2">Advanced (6-7 Letters)</button>
+                 <button data-difficulty="3">Expert (8-9 Letters)</button>
+                 <button data-difficulty="4">Master (10-12 Letters)</button>
+             </div>
+              <div id="lockout-message" style="display: none;">
+                 <h2>TERMINAL LOCKED</h2>
+                 <p>Too many failed attempts!</p>
+                 <p>Password was: <strong id="correct-password-reveal"></strong></p>
+                 <p>Lockout active... (<span id="lockout-timer">10</span>s)</p>
+            </div>
+             <div id="success-message" style="display: none;">
+                 <h2>PASSWORD ACCEPTED</h2>
+                 <p>Terminal Access Granted!</p>
+                 <button id="play-again-button">Hack Another Terminal?</button>
+            </div>
+         </div>
+
+    </div>
+
+    <script src="words.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
