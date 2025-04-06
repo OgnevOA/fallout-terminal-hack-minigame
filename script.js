@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "3": { name: "Expert", length: [8, 9], words: 12, attempts: 4 },
         "4": { name: "Master", length: [10, 12], words: 15, attempts: 4 },
     };
-    const JUNK_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" + "0123456789";
+    const JUNK_CHARS = "!\"#$%&'*+,-./:;=?@\\^_`|~" + "0123456789";
     const START_ADDRESS = 0xF600;
     const ADDRESS_INCREMENT = 0x10;
     const BASE_TOTAL_LINES = 24; // 12 rows per column
