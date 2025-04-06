@@ -64,37 +64,51 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateLikeness(guess, correct) { let l = 0; for (let i = 0; i < correct.length; i++) { if (i < guess.length && guess[i] === correct[i]) { l++; } } return l; }
 
 
-    // --- Game Logic ---
-    function startGame(difficultySetting) {
-        currentDifficulty = difficultySetting;
-        attemptsLeft = difficultySetting.attempts;
-        maxAttempts = difficultySetting.attempts;
-        wordLength = getRandomInt(difficultySetting.length[0], difficultySetting.length[1]);
-        const numWords = difficultySetting.words;
-        dudRemoversAvailable = NUM_DUD_REMOVERS;
-        attemptResetsAvailable = NUM_ATTEMPT_RESETS;
-        isLockedOut = false;
-        activeBrackets = []; // Clear active brackets
-        clearInterval(lockoutIntervalId);
-
-        const availableWords = getWordsOfLength(wordLength, wordLength);
-        if (availableWords.length < numWords) {
-            displayFeedback(`Error: Not enough words of length ${wordLength}. Found ${availableWords.length}, need ${numWords}.`);
-            showOverlay('difficulty');
-            return;
-        }
-
-        potentialPasswords = shuffleArray([...availableWords]).slice(0, numWords);
-        correctPassword = potentialPasswords[getRandomInt(0, potentialPasswords.length - 1)];
-        activePasswords = [...potentialPasswords];
-
-        updateAttemptsDisplay();
-        displayFeedback('');
-        generateGrid(); // Generate grid, including brackets
-
-        overlay.classList.remove('active');
-        hideOverlayMessages();
+// --- Game Logic ---
+function startGame(difficultySetting) {
+    const difficultyKey = Object.keys(DIFFICULTY_SETTINGS).find(key => DIFFICULTY_SETTINGS[key] === difficultySetting);
+    if (!difficultyKey) {
+        console.error("Could not determine difficulty key.");
+        // Handle error appropriately, maybe show difficulty screen again
+        showOverlay('difficulty');
+        return;
     }
+
+    currentDifficulty = difficultySetting; // Store selected difficulty setting object
+    attemptsLeft = difficultySetting.attempts;
+    maxAttempts = difficultySetting.attempts;
+    // wordLength is now determined by the chosen set, no need to calculate separately initially
+    // const numWords = difficultySetting.words; // Used implicitly by getRandomWordSet filtering
+
+    dudRemoversAvailable = NUM_DUD_REMOVERS;
+    attemptResetsAvailable = NUM_ATTEMPT_RESETS;
+    isLockedOut = false;
+    activeBrackets = [];
+    clearInterval(lockoutIntervalId);
+
+    // --- Select Word Set ---
+    const selectedSet = getRandomWordSet(difficultyKey, DIFFICULTY_SETTINGS);
+
+    if (!selectedSet) {
+        // Handle error: No valid set found
+        displayFeedback(`Error: No valid word sets configured for ${difficultySetting.name} difficulty. Check words.js.`);
+        showOverlay('difficulty'); // Go back to selection
+        return;
+    }
+
+    potentialPasswords = selectedSet; // The selected set IS the list of potential passwords
+    wordLength = potentialPasswords[0].length; // All words in the set have the same length
+    correctPassword = potentialPasswords[getRandomInt(0, potentialPasswords.length - 1)];
+    activePasswords = [...potentialPasswords]; // Initially, all are active
+
+    // Update UI elements
+    updateAttemptsDisplay();
+    displayFeedback('');
+    generateGrid(); // Generate grid based on the chosen potentialPasswords
+
+    overlay.classList.remove('active');
+    hideOverlayMessages();
+}
 
     function generateGrid() {
         gridContainer.innerHTML = ''; // Clear previous grid
