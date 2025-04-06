@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added viewport for responsiveness -->
     <title>Fallout Terminal Hack</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -10,8 +10,7 @@
     <div id="terminal">
         <div id="header">
             <p>ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</p>
-            <!-- Minor change: Hint about brackets -->
-            <p>ENTER PASSWORD NOW</p>
+            <p>ENTER PASSWORD NOW (BRACKETS MAY HIDE OPTIONS)</p>
         </div>
 
         <div id="attempts-area">
@@ -29,10 +28,10 @@
         <!-- CONTROLS AREA REMOVED -->
 
         <div id="prompt-area">
-             > <span id="cursor">█</span>
+             > <span id="hover-preview"></span><span id="cursor">█</span>
         </div>
 
-         <div id="overlay" class="active">
+         <div id="overlay" class="active"> <!-- Start with overlay active -->
              <div id="difficulty-selector">
                  <h2>Select Difficulty:</h2>
                  <button data-difficulty="1">Novice (4-5 Letters)</button>
@@ -55,7 +54,7 @@
 
     </div>
 
-    <script src="words.js"></script>
+    <script src="words.js"></script> <!-- Load words first -->
     <script src="script.js"></script>
 </body>
 </html>

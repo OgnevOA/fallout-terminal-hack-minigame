@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const correctPasswordReveal = document.getElementById('correct-password-reveal');
     const lockoutTimerSpan = document.getElementById('lockout-timer');
     const playAgainButton = document.getElementById('play-again-button');
+    const hoverPreviewSpan = document.getElementById('hover-preview'); // <<< Reference for hover preview
 
 
     // --- Helper Functions ---
@@ -64,56 +65,48 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateLikeness(guess, correct) { let l = 0; for (let i = 0; i < correct.length; i++) { if (i < guess.length && guess[i] === correct[i]) { l++; } } return l; }
 
 
-// --- Game Logic ---
-function startGame(difficultySetting) {
-    const difficultyKey = Object.keys(DIFFICULTY_SETTINGS).find(key => DIFFICULTY_SETTINGS[key] === difficultySetting);
-    if (!difficultyKey) {
-        console.error("Could not determine difficulty key.");
-        // Handle error appropriately, maybe show difficulty screen again
-        showOverlay('difficulty');
-        return;
+    // --- Game Logic ---
+    function startGame(difficultySetting) {
+        const difficultyKey = Object.keys(DIFFICULTY_SETTINGS).find(key => DIFFICULTY_SETTINGS[key] === difficultySetting);
+        if (!difficultyKey) {
+            console.error("Could not determine difficulty key.");
+            showOverlay('difficulty');
+            return;
+        }
+
+        currentDifficulty = difficultySetting;
+        attemptsLeft = difficultySetting.attempts;
+        maxAttempts = difficultySetting.attempts;
+        dudRemoversAvailable = NUM_DUD_REMOVERS;
+        attemptResetsAvailable = NUM_ATTEMPT_RESETS;
+        isLockedOut = false;
+        activeBrackets = [];
+        clearInterval(lockoutIntervalId);
+
+        const selectedSet = getRandomWordSet(difficultyKey, DIFFICULTY_SETTINGS);
+
+        if (!selectedSet) {
+            displayFeedback(`Error: No valid word sets configured for ${difficultySetting.name} difficulty. Check words.js.`);
+            showOverlay('difficulty');
+            return;
+        }
+
+        potentialPasswords = selectedSet;
+        wordLength = potentialPasswords[0].length;
+        correctPassword = potentialPasswords[getRandomInt(0, potentialPasswords.length - 1)];
+        activePasswords = [...potentialPasswords];
+
+        updateAttemptsDisplay();
+        displayFeedback('');
+        generateGrid();
+
+        overlay.classList.remove('active');
+        hideOverlayMessages();
     }
-
-    currentDifficulty = difficultySetting; // Store selected difficulty setting object
-    attemptsLeft = difficultySetting.attempts;
-    maxAttempts = difficultySetting.attempts;
-    // wordLength is now determined by the chosen set, no need to calculate separately initially
-    // const numWords = difficultySetting.words; // Used implicitly by getRandomWordSet filtering
-
-    dudRemoversAvailable = NUM_DUD_REMOVERS;
-    attemptResetsAvailable = NUM_ATTEMPT_RESETS;
-    isLockedOut = false;
-    activeBrackets = [];
-    clearInterval(lockoutIntervalId);
-
-    // --- Select Word Set ---
-    const selectedSet = getRandomWordSet(difficultyKey, DIFFICULTY_SETTINGS);
-
-    if (!selectedSet) {
-        // Handle error: No valid set found
-        displayFeedback(`Error: No valid word sets configured for ${difficultySetting.name} difficulty. Check words.js.`);
-        showOverlay('difficulty'); // Go back to selection
-        return;
-    }
-
-    potentialPasswords = selectedSet; // The selected set IS the list of potential passwords
-    wordLength = potentialPasswords[0].length; // All words in the set have the same length
-    correctPassword = potentialPasswords[getRandomInt(0, potentialPasswords.length - 1)];
-    activePasswords = [...potentialPasswords]; // Initially, all are active
-
-    // Update UI elements
-    updateAttemptsDisplay();
-    displayFeedback('');
-    generateGrid(); // Generate grid based on the chosen potentialPasswords
-
-    overlay.classList.remove('active');
-    hideOverlayMessages();
-}
 
     function generateGrid() {
         gridContainer.innerHTML = ''; // Clear previous grid
-        // ** Use the fixed CONTENT_WIDTH calculated globally for padding **
-        const targetContentWidth = Math.max(1, CONTENT_WIDTH - 1);
+        const targetContentWidth = Math.max(1, CONTENT_WIDTH-1); // Use fixed width for padding logic
 
         const linesPerColumn = Math.max(Math.ceil(BASE_TOTAL_LINES / 2), Math.ceil((potentialPasswords.length + dudRemoversAvailable + attemptResetsAvailable + 5) / 2));
         const totalLines = linesPerColumn * 2;
@@ -142,11 +135,23 @@ function startGame(difficultySetting) {
         activeBrackets = [];
         let bracketIdCounter = 0;
 
+        // --- Function to append individual junk character spans ---
+        const appendJunkChars = (spanArray, count) => {
+            const junkString = generateJunk(count);
+            for (let char of junkString) {
+                const junkCharSpan = document.createElement('span');
+                junkCharSpan.classList.add('junk');
+                junkCharSpan.textContent = char;
+                spanArray.push(junkCharSpan);
+            }
+        };
+        // --- End helper ---
+
         // Build line data and DOM structure
         for (let lineIndex = 0; lineIndex < totalLines; lineIndex++) {
             const address = formatAddress(currentAddress);
             const placement = itemPlacements[lineIndex];
-            let lineContentSpans = []; // Array of span elements
+            let lineContentSpans = []; // Array of span DOM elements
             let currentLineLength = 0; // Track length of content added
 
             // Determine primary content (word, bracket, or initial junk)
@@ -155,12 +160,10 @@ function startGame(difficultySetting) {
                 const prefixLen = getRandomInt(0, targetContentWidth - word.length);
 
                 if (prefixLen > 0) {
-                    const junkSpan = createJunkSpan(generateJunk(prefixLen));
-                    lineContentSpans.push(junkSpan);
+                    appendJunkChars(lineContentSpans, prefixLen); // Use new function
                     currentLineLength += prefixLen;
                 }
-                const wordSpan = createWordSpan(word);
-                lineContentSpans.push(wordSpan);
+                lineContentSpans.push(createWordSpan(word)); // Keep createWordSpan
                 currentLineLength += word.length;
 
             } else if (placement?.type === 'bracket') {
@@ -172,55 +175,70 @@ function startGame(difficultySetting) {
                     const prefixLen = getRandomInt(0, targetContentWidth - bracketPairLen);
                     const bracketId = `bracket-${bracketIdCounter++}`;
                     const bracketEffect = placement.value.type;
+                    const innerJunkString = generateJunk(innerJunkLen); // Generate inner junk once
 
                     if (prefixLen > 0) {
-                        const junkSpan = createJunkSpan(generateJunk(prefixLen));
-                        lineContentSpans.push(junkSpan);
+                        appendJunkChars(lineContentSpans, prefixLen); // Use new function
                         currentLineLength += prefixLen;
                     }
 
-                    const bracketSpan = document.createElement('span');
-                    bracketSpan.classList.add('bracket-pair');
-                    bracketSpan.dataset.bracketId = bracketId;
-                    bracketSpan.dataset.effect = bracketEffect;
-                    bracketSpan.textContent = bracketType[0] + generateJunk(innerJunkLen) + bracketType[1];
-                    lineContentSpans.push(bracketSpan);
+                    // Create a wrapper span for the bracket pair for easier targeting/styling
+                    const bracketWrapperSpan = document.createElement('span');
+                    bracketWrapperSpan.classList.add('bracket-pair'); // Class on the wrapper
+                    bracketWrapperSpan.dataset.bracketId = bracketId;
+                    bracketWrapperSpan.dataset.effect = bracketEffect;
+
+                    // Append individual spans inside the wrapper
+                    const openBracketSpan = document.createElement('span');
+                    openBracketSpan.classList.add('junk'); // Style brackets as junk maybe?
+                    openBracketSpan.textContent = bracketType[0];
+                    bracketWrapperSpan.appendChild(openBracketSpan);
+
+                    // Append inner junk char by char
+                    for (let char of innerJunkString) {
+                         const innerJunkCharSpan = document.createElement('span');
+                         innerJunkCharSpan.classList.add('junk');
+                         innerJunkCharSpan.textContent = char;
+                         bracketWrapperSpan.appendChild(innerJunkCharSpan);
+                     }
+
+                    const closeBracketSpan = document.createElement('span');
+                    closeBracketSpan.classList.add('junk');
+                    closeBracketSpan.textContent = bracketType[1];
+                    bracketWrapperSpan.appendChild(closeBracketSpan);
+
+                    lineContentSpans.push(bracketWrapperSpan); // Add the wrapper span
                     currentLineLength += bracketPairLen;
 
                     activeBrackets.push({
                         id: bracketId,
                         type: bracketEffect,
-                        element: bracketSpan
+                        element: bracketWrapperSpan // Reference the wrapper
                     });
 
                 } else {
-                    // Bracket doesn't fit, fill with junk up to target width
-                    const junkLen = targetContentWidth; // Fill entire width
-                    lineContentSpans.push(createJunkSpan(generateJunk(junkLen)));
-                    currentLineLength += junkLen;
+                    // Bracket doesn't fit, fill with junk chars
+                    appendJunkChars(lineContentSpans, targetContentWidth);
+                    currentLineLength += targetContentWidth;
                 }
             } else {
-                // No specific item or word/bracket didn't fit. Fill with junk.
-                // Start with a random amount, then pad later
-                 const initialJunkLen = getRandomInt(Math.min(10, targetContentWidth), targetContentWidth); // Generate some junk
+                // No specific item or word/bracket didn't fit. Fill with junk chars.
+                 const initialJunkLen = getRandomInt(Math.min(10, targetContentWidth), targetContentWidth);
                  if(initialJunkLen > 0){
-                    lineContentSpans.push(createJunkSpan(generateJunk(initialJunkLen)));
+                     appendJunkChars(lineContentSpans, initialJunkLen);
                     currentLineLength += initialJunkLen;
                  }
             }
 
-            // ** Pad the rest of the line with junk if necessary **
+            // ** Pad the rest of the line with junk chars if necessary **
             if (currentLineLength < targetContentWidth) {
                 const paddingNeeded = targetContentWidth - currentLineLength;
-                 if (paddingNeeded > 0) { // Ensure we need padding
-                    lineContentSpans.push(createJunkSpan(generateJunk(paddingNeeded)));
+                 if (paddingNeeded > 0) {
+                    appendJunkChars(lineContentSpans, paddingNeeded);
                  }
             }
-             // ** Safety Check (Optional): Trim if somehow exceeded **
-             // This part is complex with spans. Usually, the padding logic above is sufficient.
-             // If issues persist, we might need to build a string first, trim it, then create spans.
 
-             // Create the line container and add elements
+            // Create the line container and add elements
             const lineDiv = document.createElement('div');
             lineDiv.classList.add('grid-line');
 
@@ -239,13 +257,7 @@ function startGame(difficultySetting) {
         }
     }
 
-    // Helper functions to create specific spans
-    function createJunkSpan(text) {
-        const span = document.createElement('span');
-        span.classList.add('junk');
-        span.textContent = text;
-        return span;
-    }
+    // Keep createWordSpan function
     function createWordSpan(word) {
         const span = document.createElement('span');
         span.classList.add('password');
@@ -273,50 +285,59 @@ function startGame(difficultySetting) {
     }
 
     // --- Event Handling ---
-function handleMouseOver(event) {
+    function handleMouseOver(event) {
         if (isLockedOut) return;
 
-        // Determine the actual target SPAN (.password, .bracket-pair, .junk)
         let targetSpan = event.target;
         if (targetSpan.nodeType === Node.TEXT_NODE) {
-            // If hovering over text, get the parent span
             targetSpan = targetSpan.parentNode;
         }
 
-        // Ensure it's one of the spans we care about AND it's not deactivated
-        if (
-            targetSpan && // Check if targetSpan is valid
-            (targetSpan.classList.contains('password') || targetSpan.classList.contains('bracket-pair') || targetSpan.classList.contains('junk')) &&
+        const bracketWrapper = targetSpan.closest('.bracket-pair');
+
+        let elementToHighlight = null;
+        let previewText = ''; // Text to show in the preview span
+
+        if (bracketWrapper && !bracketWrapper.classList.contains('bracket-deactivated')) {
+            // Hovering inside an active bracket pair
+            elementToHighlight = bracketWrapper;
+            previewText = bracketWrapper.textContent; // Show full bracket text
+        }
+        // Else if not inside a bracket, check for word or individual junk
+        else if (
+            targetSpan && targetSpan.nodeType !== Node.TEXT_NODE && // Ensure it's an element
+            (targetSpan.classList.contains('password') || targetSpan.classList.contains('junk')) &&
             !targetSpan.classList.contains('guessed') &&
             !targetSpan.classList.contains('removed-dud') &&
-            !targetSpan.classList.contains('bracket-deactivated')
+            !targetSpan.classList.contains('bracket-deactivated') && // Redundant check, but safe
+            !targetSpan.closest('.bracket-pair') // Make sure it's not junk *inside* a bracket
            )
         {
-            // Only add highlight if it's different from the currently highlighted one
-            if (targetSpan !== highlightedElement) {
-                clearHighlight(); // Clear previous highlight first
-                targetSpan.classList.add('hover-highlight');
-                highlightedElement = targetSpan; // Track the newly highlighted span
+            // Highlight individual word or junk span
+            elementToHighlight = targetSpan;
+            previewText = targetSpan.textContent; // Show word or single junk char
+        }
+
+        // Apply highlight and update preview text if a valid target was found
+        if (elementToHighlight) {
+             if (elementToHighlight !== highlightedElement) {
+                clearHighlight(); // Clear previous highlight and preview
+                elementToHighlight.classList.add('hover-highlight');
+                highlightedElement = elementToHighlight;
+                hoverPreviewSpan.textContent = previewText; // Update preview text
             }
         } else {
-            // If hovering over something else (like the gaps, .content, .grid-line), clear any existing highlight
+            // Hovering over something non-highlightable, clear any existing highlight and preview
             clearHighlight();
         }
     }
 
-function handleMouseOut(event) {
-         // When moving out of the *entire grid container*, clear the highlight.
-         // We rely on mouseover onto a *new* element to clear the highlight
-         // if moving between valid spans within the grid.
-         // However, if the relatedTarget (where the mouse moved TO) is outside
-         // the grid container, we definitely need to clear.
+    function handleMouseOut(event) {
+        // When moving out of the *entire grid container*, clear the highlight.
         if (isLockedOut) return;
-
         if (!gridContainer.contains(event.relatedTarget)) {
              clearHighlight();
         }
-         // Optimization: We could also check if event.target was the highlightedElement
-         // and clear it, but relying on mouseover onto the new target is often sufficient.
     }
 
     function clearHighlight() {
@@ -324,57 +345,63 @@ function handleMouseOut(event) {
             highlightedElement.classList.remove('hover-highlight');
             highlightedElement = null; // Reset tracker
         }
-        // Fallback cleanup (usually not needed with good tracking)
-        // const strayHighlights = gridContainer.querySelectorAll('.hover-highlight');
-        // if (strayHighlights.length > 0) {
-        //     strayHighlights.forEach(el => el.classList.remove('hover-highlight'));
-        // }
+        hoverPreviewSpan.textContent = ''; // Clear preview text whenever highlight is cleared
     }
+
 
     function handleGridClick(event) {
         if (isLockedOut) return;
 
         let target = event.target;
-        if (target.nodeType === Node.TEXT_NODE) {
-            target = target.parentNode;
-        }
 
-        // 1. Check for Word Click (only if not guessed/removed)
-        if (target.classList.contains('password') && !target.classList.contains('guessed') && !target.classList.contains('removed-dud')) {
-            const guessedWord = target.dataset.word;
+        // Use highlightedElement if available (more reliable than click target sometimes)
+        // Otherwise, determine target from click event
+        let targetElement = highlightedElement || (target.nodeType === Node.TEXT_NODE ? target.parentNode : target);
+
+
+        // 1. Check for Word Click
+        if (targetElement && targetElement.classList.contains('password') && !targetElement.classList.contains('guessed') && !targetElement.classList.contains('removed-dud')) {
+            const guessedWord = targetElement.dataset.word;
             if (!activePasswords.includes(guessedWord)) {
                 displayFeedback(`>>> '${guessedWord}' already tried or removed.`);
+                clearHighlight(); // Clear highlight even if invalid
                 return;
             }
             activePasswords = activePasswords.filter(w => w !== guessedWord);
-            processGuess(guessedWord, target);
-            clearHighlight(); // Clear highlight after click processing
+            processGuess(guessedWord, targetElement); // Pass the correct element
+            // clearHighlight() will be called implicitly by mouse moving off
             return;
         }
 
-        // 2. Check for Bracket Click (only if not deactivated)
-        if (target.classList.contains('bracket-pair') && !target.classList.contains('bracket-deactivated')) {
-            const bracketId = target.dataset.bracketId;
-            const bracketEffect = target.dataset.effect;
+        // 2. Check for Bracket Click (Check the wrapper)
+        const bracketWrapper = targetElement ? targetElement.closest('.bracket-pair') : null; // Find closest bracket-pair ancestor or self
+        if (bracketWrapper && !bracketWrapper.classList.contains('bracket-deactivated')) {
+            const bracketId = bracketWrapper.dataset.bracketId;
+            const bracketEffect = bracketWrapper.dataset.effect;
             const activeBracketIndex = activeBrackets.findIndex(b => b.id === bracketId);
 
             if (activeBracketIndex !== -1) {
                 if (bracketEffect === 'dud') {
-                    triggerDudEffect(); // Don't need target element anymore
+                    triggerDudEffect();
                 } else if (bracketEffect === 'reset') {
-                    triggerResetEffect(); // Don't need target element anymore
+                    triggerResetEffect();
                 }
-                // Deactivate visually and logically
-                target.classList.remove('bracket-pair', 'hover-highlight');
-                target.classList.add('bracket-deactivated');
-                target.textContent = '.'.repeat(target.textContent.length);
+                // Deactivate wrapper visually and logically
+                bracketWrapper.classList.remove('bracket-pair', 'hover-highlight');
+                bracketWrapper.classList.add('bracket-deactivated');
+                // Replace content of the wrapper with dots
+                let currentLength = 0;
+                 try { currentLength = bracketWrapper.textContent.length; } catch(e) { currentLength = 5; }
+                 bracketWrapper.textContent = '.'.repeat(Math.max(1, currentLength));
+
                 activeBrackets.splice(activeBracketIndex, 1);
                 clearHighlight();
             }
             return;
         }
-        // Clicked on junk or deactivated item - clear feedback
+        // Clicked on junk or deactivated item - clear feedback and highlight
          displayFeedback("");
+         clearHighlight();
     }
 
 
@@ -430,10 +457,13 @@ function handleMouseOut(event) {
 
     function handleSuccess() {
         isLockedOut = true;
+        clearHighlight(); // Ensure no highlight remains on success
         showOverlay('success');
     }
+
     function handleFailure() {
         isLockedOut = true;
+        clearHighlight(); // Ensure no highlight remains on failure
         correctPasswordReveal.textContent = correctPassword;
         lockoutTimerSpan.textContent = LOCKOUT_TIME_SECONDS;
         showOverlay('lockout');
@@ -460,6 +490,7 @@ function handleMouseOut(event) {
             successMessage.style.display = 'block';
         }
     }
+
     function hideOverlayMessages() {
         difficultySelector.style.display = 'none';
         lockoutMessage.style.display = 'none';
@@ -476,7 +507,10 @@ function handleMouseOut(event) {
             }
         }
      });
-    playAgainButton.addEventListener('click', () => { showOverlay('difficulty'); });
+    playAgainButton.addEventListener('click', () => {
+        clearHighlight(); // Clear any lingering state before restart
+        showOverlay('difficulty');
+    });
 
     // Use event delegation for hover and click on the grid
     gridContainer.addEventListener('mouseover', handleMouseOver);

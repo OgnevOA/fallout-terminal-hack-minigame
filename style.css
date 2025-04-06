@@ -12,7 +12,7 @@ html, body {
     /* Prioritize reliable monospace fonts */
     font-family: 'Consolas', 'Monaco', 'Courier New', 'Lucida Console', monospace;
     font-size: 16px; /* Base size - adjust if needed */
-    overflow: hidden; /* Prevent body scrolling */
+    overflow: hidden; /* Prevent body scrolling on desktop */
 }
 
 /* Terminal Container - 80 Columns Wide */
@@ -147,6 +147,14 @@ html, body {
     margin-top: 0.5em;
     height: 1.2em; /* Reserve space */
     white-space: pre;
+}
+
+/* Style for the hover preview text */
+#hover-preview {
+    padding: 0 0.5ch; /* Add some space around the preview text */
+    /* Inherits color and font from #terminal */
+    /* Optional: Make it slightly less prominent? */
+    /* opacity: 0.8; */
 }
 
 #cursor {
@@ -290,6 +298,8 @@ html, body {
     padding: 0 0.25em;
 }
 
+
+/* --- Responsive Styles for Mobile --- */
 @media (max-width: 768px) { /* Adjust breakpoint as needed (e.g., 600px for smaller phones) */
 
     html, body {
@@ -317,6 +327,7 @@ html, body {
         column-gap: 0;
         font-size: 0.9em; /* Make grid text slightly smaller */
         width: 100%; /* Ensure it uses full container width */
+        white-space: normal; /* Allow wrapping */
     }
 
     .grid-line {
@@ -351,6 +362,7 @@ html, body {
     /* Prompt area */
     #prompt-area {
         margin-top: 1em;
+        white-space: normal; /* Allow preview to wrap if needed */
     }
 
     /* Overlay adjustments */
